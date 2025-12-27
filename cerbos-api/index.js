@@ -21,7 +21,7 @@ const config = {
   auth0Logout: true,
   idpLogout: true,
   secret: process.env.APP_SECRET,
-  baseURL: process.env.AUTH0_AUDIENCE, // Fixed: Using your .env audience
+  baseURL: process.env.AUTH0_AUDIENCE,
   clientID: process.env.AUTH0_CLIENT_ID,
   clientSecret: process.env.AUTH0_CLIENT_SECRET,
   issuerBaseURL: `https://${process.env.AUTH0_DOMAIN}`,
@@ -35,7 +35,6 @@ const config = {
 app.use(auth(config));
 
 async function checkPerm(user, resourceId, action) {
-  // Fixed: Role key now uses the audience from .env
   const roleKey = `${process.env.AUTH0_AUDIENCE}roles`;
   const roles = user[roleKey] || user.roles || ['user'];
   const roleArray = Array.isArray(roles) ? roles : [roles];
@@ -69,7 +68,6 @@ async function checkPerm(user, resourceId, action) {
 app.get('/', requiresAuth(), async (req, res) => {
   try {
     const files = fs.readdirSync(STORAGE_DIR).filter(f => f.endsWith('.json'));
-    // Fixed: Role key now uses the audience from .env
     const roleKey = `${process.env.AUTH0_AUDIENCE}roles`;
     const displayRoles = req.oidc.user[roleKey] || ['user'];
     res.render('index', { 
