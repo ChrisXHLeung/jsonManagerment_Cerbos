@@ -1,0 +1,11 @@
+exports.onExecutePostLogin = async (event, api) => {
+  const namespace = 'https://<yourDomain>/roles';
+  
+  let roles = ['user'];
+  if (event.authorization && event.authorization.roles && event.authorization.roles.length > 0) {
+    roles = event.authorization.roles;
+  }
+  
+  api.idToken.setCustomClaim(namespace, roles);
+  api.accessToken.setCustomClaim(namespace, roles);
+};
