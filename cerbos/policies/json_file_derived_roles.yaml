@@ -1,0 +1,18 @@
+---
+apiVersion: api.cerbos.dev/v1
+derivedRoles:
+  name: json_file_derived_roles
+  definitions:
+    - name: member
+      parentRoles: ["member"]
+      condition:
+        match:
+          # If filename has 'sensitive', this role is NOT granted
+          expr: "!R.id.matches('(?i)sensitive')"
+
+    - name: user
+      parentRoles: ["user"]
+      condition:
+        match:
+          # Same for regular users
+          expr: "!R.id.matches('(?i)sensitive')"

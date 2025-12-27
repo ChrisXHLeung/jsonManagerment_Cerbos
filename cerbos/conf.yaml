@@ -1,0 +1,5 @@
+storage:
+  driver: "disk"
+  disk:
+    directory: "/policies" # This must match the volume mapping inside the container
+    watchForChanges: true
