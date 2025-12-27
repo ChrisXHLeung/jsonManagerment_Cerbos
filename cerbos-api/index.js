@@ -21,7 +21,7 @@ const config = {
   auth0Logout: true,
   idpLogout: true,
   secret: process.env.APP_SECRET,
-  baseURL: 'https://auth.chriscn.cn',
+  baseURL: process.env.AUTH0_AUDIENCE, // Fixed: Using your .env audience
   clientID: process.env.AUTH0_CLIENT_ID,
   clientSecret: process.env.AUTH0_CLIENT_SECRET,
   issuerBaseURL: `https://${process.env.AUTH0_DOMAIN}`,
@@ -35,7 +35,8 @@ const config = {
 app.use(auth(config));
 
 async function checkPerm(user, resourceId, action) {
-  const roleKey = 'https://auth.chriscn.cn/roles';
+  // Fixed: Role key now uses the audience from .env
+  const roleKey = `${process.env.AUTH0_AUDIENCE}roles`;
   const roles = user[roleKey] || user.roles || ['user'];
   const roleArray = Array.isArray(roles) ? roles : [roles];
 
@@ -43,7 +44,6 @@ async function checkPerm(user, resourceId, action) {
   console.log('Principal:', user.sub, 'Roles:', JSON.stringify(roleArray));
 
   try {
-    // Using the official SDK helper to check specifically for one resource
     const decision = await cerbos.checkResource({
       principal: {
         id: user.sub,
@@ -56,7 +56,6 @@ async function checkPerm(user, resourceId, action) {
       actions: [action],
     });
 
-    // This method is the safest way to get the boolean result
     const isAllowed = decision.isAllowed(action);
     
     console.log('Action:', action, 'Allowed:', isAllowed);
@@ -70,7 +69,8 @@ async function checkPerm(user, resourceId, action) {
 app.get('/', requiresAuth(), async (req, res) => {
   try {
     const files = fs.readdirSync(STORAGE_DIR).filter(f => f.endsWith('.json'));
-    const roleKey = 'https://auth.chriscn.cn/roles';
+    // Fixed: Role key now uses the audience from .env
+    const roleKey = `${process.env.AUTH0_AUDIENCE}roles`;
     const displayRoles = req.oidc.user[roleKey] || ['user'];
     res.render('index', { 
       files, 
