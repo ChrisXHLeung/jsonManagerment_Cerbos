@@ -1,92 +1,111 @@
-# Secure File Management System (Build by AI)
+# Multi-Role JSON Management System
 
-A distributed system using **Node.js** for the API and **Cerbos** for policy-based authorization.
+This project is a reference implementation for a secure file management system. It demonstrates the decoupling of **Identity Authentication** from **Access Control Policy Enforcement**.
 
-## 📂 Project Structure
+## 🏗️ Project Architecture
+
+The system manages **JavaScript Object Notation (JSON)** files through a coordinated flow between three distinct layers:
+
+1. **Identity Provider**: Uses **Auth0** to verify user identities.
+2. **Authorization Engine**: Uses **Cerbos** to evaluate permissions based on **Attribute-Based Access Control (ABAC)**.
+3. **Application Tier**: A **Node.js** service that handles file **Input/Output (I/O)** and serves as the **Policy Enforcement Point (PEP)**.
+
+---
+
+## 🔐 Authentication: OpenID Connect (OIDC)
+
+This project strictly implements the **OpenID Connect (OIDC)** protocol, which is an identity layer built on top of the **OAuth 2.0 (Open Authorization)** framework.
+
+* **Identity Verification**: Instead of storing passwords locally, the application delegates authentication to **Auth0**.
+* **Identity Tokens**: Upon successful login, **Auth0** issues a **JSON Web Token (JWT)** known as an **ID Token**.
+* **Claims Mapping**: User roles (`admin`, `member`, `user`) are embedded into the **JSON Web Token** as **Custom Claims**.
+
+---
+
+## 👥 User Roles & Permissions Matrix
+
+| Action | **User** (Observer) | **Member** (Contributor) | **Admin** (Superuser) |
+| --- | --- | --- | --- |
+| Read File | ✅ | ✅ | ✅ |
+| Create File | ❌ | ✅ | ✅ |
+| Update/Overwrite | ❌ | ❌ | ✅ |
+| Delete File | ❌ | ❌ | ✅ |
+
+---
+
+## 📂 Repository Structure
 
 ```text
 .
-├── cerbos/                 # Cerbos Engine configuration & data
-│   ├── conf.yaml           # Cerbos server config
-│   └── policies/           # YAML Policy definitions
-│       └── resource_json_file.yaml
-└── cerbos-api/             # Node.js API Service
-    ├── storage/            # Local JSON file storage
-    ├── views/              # EJS templates
-    ├── index.js            # Main API logic
-    ├── Dockerfile          # Secure API image
-    └── .env                # Environment secrets
+├── cerbos/                 # Policy Engine Configuration
+│   ├── conf.yaml           # Cerbos Server Configuration
+│   └── policies/           # Permission logic (YAML)
+└── cerbos-api/             # Node.js Application Service
+    ├── storage/            # Managed JSON files
+    ├── views/              # EJS Templates
+    ├── index.js            # Main Logic & gRPC Client
+    └── Dockerfile          # Secure API Image
 
 ```
 
 ---
 
-## 🛠️ Security Model
+## 🚀 Deployment Workflow
 
-Authorization is decoupled from the code. The `admin` role has full ownership, while `member` and `user` roles are restricted.
+To deploy the full stack, follow these steps to ensure the **Policy Decision Point (PDP)** and the **API Service** communicate correctly.
 
-| Role | Read | Create | Update | Delete |
-| --- | --- | --- | --- | --- |
-| **admin** | ✅ | ✅ | ✅ | ✅ |
-| **member** | ✅ | ✅ | ❌ | ❌ |
-| **user** | ✅ | ❌ | ❌ | ❌ |
+### 1. Prepare the Cerbos Instance
 
----
+The Cerbos engine must be running to evaluate permissions.
 
-## ⚙️ Configuration
+* **Mount Policies**: Ensure the `cerbos/policies` folder is mounted to the container's `/policies` path.
+* **Ports**: Expose port `3592` for **Hypertext Transfer Protocol (HTTP)** and `3593` for **Google Remote Procedure Call (gRPC)**.
 
-### 1. API Setup (`cerbos-api/.env`)
+### 2. Configure Environment Variables
+
+Inside `cerbos-api/`, create a `.env` file with your specific credentials:
 
 ```env
-# Network
-CERBOS_HOST='your_cerbos_server_ip:3593'
-APP_SECRET='your_random_secret'
+# Network Configuration
+CERBOS_HOST='<YOUR_CERBOS_IP_OR_HOSTNAME>:3593'
+APP_SECRET='<RANDOM_SESSION_SECRET>'
 
-# Auth0 Configuration
-AUTH0_DOMAIN='your-tenant.auth0.com'
-AUTH0_CLIENT_ID='your-id'
-AUTH0_CLIENT_SECRET='your-secret'
-AUTH0_AUDIENCE='your-api-audience'
+# OpenID Connect (OIDC) Settings
+AUTH0_DOMAIN='<YOUR_TENANT>.auth0.com'
+AUTH0_CLIENT_ID='<YOUR_CLIENT_ID>'
+AUTH0_CLIENT_SECRET='<YOUR_CLIENT_SECRET>'
+AUTH0_AUDIENCE='https://auth.chriscn.cn'
 
 ```
 
-### 2. Cerbos Setup (`cerbos/conf.yaml`)
+### 3. Build and Execute Containers
 
-Ensure the storage driver is set to disk pointing to the internal `/policies` path.
-
----
-
-## 🐳 Docker Deployment
-
-### Building the API Service
-
-The `cerbos-api` Dockerfile includes security updates and runs as a non-privileged user:
+Use the provided **Dockerfile** to build the secure API image:
 
 ```bash
+# Build the API image with security patches
 cd cerbos-api
-docker build -t cerbos-api:latest .
+docker build -t cerbos-api-service .
+
+# Run the API Service
+docker run -d \
+  --name json-api \
+  -p 3000:3000 \
+  --env-file .env \
+  cerbos-api-service
 
 ```
 
-### Running the Services
+### 4. Verification
 
-The API communicates with the Cerbos engine via **gRPC (Port 3593)**. Ensure your network or firewall allows traffic between the two containers/hosts on this port.
-
----
-
-## 🚀 API Endpoints
-
-* `GET /`: List all available JSON files.
-* `GET /download/:name`: Download a file (Requires `read` permission).
-* `POST /upload`: Upload a new file (`create`) or overwrite existing (`update`).
-* `GET /delete/:name`: Remove a file (Requires `delete` permission).
+1. Access the web interface at `http://localhost:3000`.
+2. Login via the **Auth0** portal.
+3. The **Node.js** app will automatically query the **Cerbos** gRPC endpoint to determine which buttons (Download/Delete/Upload) to display based on your role.
 
 ---
 
 ## 🛡️ Security Best Practices
 
-* **Non-Root**: The API container runs under the `node` user to prevent privilege escalation.
-* **Minimal Image**: Built on `node:20-slim` to reduce the attack surface.
-* **External Policies**: Update authorization rules in the `cerbos/` folder without modifying or redeploying the API code.
-
-Would you like me to create a shell script to automate the deployment of both containers at once?
+* **Non-Root Execution**: The API process runs as the `node` user to mitigate **Privilege Escalation** risks.
+* **Minimal Attack Surface**: Built on `node:20-slim` to reduce unnecessary binaries.
+* **OS Hardening**: The build process applies the latest **Operating System (OS)** security updates.
