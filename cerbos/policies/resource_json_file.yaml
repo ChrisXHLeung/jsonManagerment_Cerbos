@@ -3,16 +3,31 @@ apiVersion: api.cerbos.dev/v1
 resourcePolicy:
   version: "default"
   resource: "json_file"
+  importDerivedRoles:
+    - json_file_derived_roles
   rules:
     - actions: ["*"]
       effect: EFFECT_ALLOW
       roles:
         - admin
+
     - actions: ["read", "create"]
       effect: EFFECT_ALLOW
       roles:
         - member
+
+    - actions: ["update"]
+      effect: EFFECT_ALLOW
+      derivedRoles:
+        - chris_admin_privilege
+
     - actions: ["read"]
       effect: EFFECT_ALLOW
       roles:
         - user
+        - member
+      condition:
+        match:
+          none:
+            of:
+              - expr: "has_derived_role('sensitive_file_access_denied')"
