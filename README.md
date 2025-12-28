@@ -38,10 +38,10 @@ Unlike traditional static RBAC, this system uses **Attribute-Based Access Contro
 
 ```bash
 .
-├── cerbos/                # Policy Decision Point (PDP)
+├── PDP/                   # Policy Decision Point (PDP)
 │   ├── conf.yaml          # Cerbos server configuration
 │   └── policies/          # ABAC/RBAC logic defined in YAML
-└── cerbos-api/            # Policy Enforcement Point (PEP)
+└── PEP/                   # Policy Enforcement Point (PEP)
     ├── storage/           # Flat-file JSON database
     ├── views/             # UI Templates (EJS)
     └── index.js           # Express logic & Cerbos gRPC Client
@@ -73,7 +73,7 @@ exports.onExecutePostLogin = async (event, api) => {
 
 ### 2. Environment Variables
 
-Create `cerbos-api/.env`:
+Create `PEP/.env`:
 
 ```env
 # Infrastructure
@@ -91,10 +91,10 @@ AUTH0_CLIENT_SECRET='your_client_secret'
 
 ```bash
 # Start Cerbos PDP
-docker run -d --name cerbos -p 3593:3593 -v $(pwd)/cerbos/policies:/policies cerbos/cerbos:0.50.0
+docker run -d --name cerbos -p 3593:3593 -v $(pwd)/PDP/policies:/policies cerbos/cerbos:0.50.0
 
-# Start API Service
-cd cerbos-api && npm install && npm start
+# Start PEP Service
+cd PEP && npm install && npm start
 
 ```
 
