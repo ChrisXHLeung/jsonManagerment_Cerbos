@@ -41,8 +41,8 @@ An important resource-level restriction applies across all roles:
 
 | Action              | **User** (Observer)                                      | **Member** (Contributor)                                      | **Admin** (Superuser)                          |
 |---------------------|----------------------------------------------------------|---------------------------------------------------------------|------------------------------------------------|
-| List & Read         | ✅ Only files containing `release` and **not** `sensitive` | ✅ All files **not** containing `sensitive`                    | ✅ All files **not** containing `sensitive`     |
-| Create File         | ❌                                                        | ✅ All files **not** containing `sensitive`<br>**Only allowed Monday–Friday, 09:00–16:59** (UTC) | ✅ All files **not** containing `sensitive`<br>No time restriction |
+| List & Read         | ✅ Only files containing `release` and **not** `sensitive` | ✅ All files **not** containing `sensitive`                    | ✅ All files  |
+| Create File         | ❌                                                        | ✅ All files **not** containing `sensitive`<br>**Only allowed Monday–Friday, 09:00–16:59** (UTC) | ✅ All files |
 | Update/Overwrite    | ❌                                                        | ❌                                                             | ✅ All files **not** containing `sensitive`     |
 | Delete File         | ❌                                                        | ❌                                                             | ✅ All files **not** containing `sensitive`     |
 
