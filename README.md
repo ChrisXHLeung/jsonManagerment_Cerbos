@@ -5,17 +5,19 @@ This project is a high-performance, secure file management showcase. It demonstr
 ## 🏗️ System Architecture
 
 The system operates as a **Policy Enforcement Point (PEP)**, delegating all logic to a centralized **Policy Decision Point (PDP)**.
+![](https://raw.githubusercontent.com/ChrisXHLeung/jsonManagerment_Cerbos/refs/heads/main/images/systemWorkFlow.png)
 
 1. **Identity Layer (OIDC)**: **Auth0** handles user sessions and issues JWTs containing role claims.
 2. **Authorization Layer (ABAC)**: **Cerbos** evaluates requests against YAML-defined policies using real-time attributes (time, filename).
 3. **Application Layer (PEP)**: A **Node.js** service that manages JSON I/O and enforces the decisions received from Cerbos via **gRPC**.
-
+![](https://raw.githubusercontent.com/ChrisXHLeung/jsonManagerment_Cerbos/refs/heads/main/images/systemDiagram.png)
 ---
 
 ## 👥 Access Control Logic (ABAC)
 
-Unlike traditional static RBAC, this system uses **Attribute-Based Access Control (ABAC)** to enforce dynamic rules.
 
+Unlike traditional static RBAC, this system uses **Attribute-Based Access Control (ABAC)** to enforce dynamic rules.
+![](https://raw.githubusercontent.com/ChrisXHLeung/jsonManagerment_Cerbos/refs/heads/main/images/auth0-abac.png)
 ### 🔐 Global Security Guardrails
 
 * **Sensitivity Filter**: Any file matching `(?i)sensitive` in its name is strictly **Isolated**. No role (including Admin) can delete or modify these files via the standard API path.
