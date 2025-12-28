@@ -14,10 +14,20 @@ resourcePolicy:
       effect: EFFECT_ALLOW
       derivedRoles: ["admin"]
       
-    - actions: ["read", "create"]
+    - actions: ["read"]
       effect: EFFECT_ALLOW
       derivedRoles: ["member"]
-      
+
+    - actions: ["create"]
+      effect: EFFECT_ALLOW
+      derivedRoles: ["member"]
+      condition:
+        match:
+          all:
+            of:
+              - expr: now().getHours() >= 9 && now().getHours() < 17 
+              - expr: now().getDayOfWeek() > 0 && now().getDayOfWeek() < 6
+
     - actions: ["read"]
       effect: EFFECT_ALLOW
       derivedRoles: ["user"]

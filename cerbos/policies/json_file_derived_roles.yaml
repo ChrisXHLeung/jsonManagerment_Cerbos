@@ -19,4 +19,4 @@ derivedRoles:
       parentRoles: ["user"]
       condition:
         match:
-          expr: "!R.id.matches('(?i)sensitive')"
+          expr: "R.id.matches('(?i)release') && !R.id.matches('(?i)sensitive')"
