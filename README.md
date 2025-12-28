@@ -30,22 +30,26 @@ The system manages **JavaScript Object Notation (JSON)** files through a coordin
 
   
 
-The project is designed for teams divided into three functional groups. Access is determined by policies evaluated at the **Policy Decision Point (PDP)**:
+The project manages access to `json_file` resources (JSON files) for teams divided into three role levels. All access decisions are evaluated at runtime by the **Cerbos Policy Decision Point (PDP)**.
 
-  
+An important resource-level restriction applies across all roles:  
+- Any file whose name contains `sensitive` (case-insensitive) is completely inaccessible to everyone.  
+- **User** role can only access files whose name contains `release` (case-insensitive) and does **not** contain `sensitive`.  
+- **Member** and **Admin** roles can access any file that does **not** contain `sensitive`.
 
-| Action | **User** (Observer) | **Member** (Contributor) | **Admin** (Superuser) |
+### Access Matrix
 
-| --- | --- | --- | --- |
+| Action              | **User** (Observer)                                      | **Member** (Contributor)                                      | **Admin** (Superuser)                          |
+|---------------------|----------------------------------------------------------|---------------------------------------------------------------|------------------------------------------------|
+| List & Read         | ✅ Only files containing `release` and **not** `sensitive` | ✅ All files **not** containing `sensitive`                    | ✅ All files **not** containing `sensitive`     |
+| Create File         | ❌                                                        | ✅ All files **not** containing `sensitive`<br>**Only allowed Monday–Friday, 09:00–16:59** (UTC) | ✅ All files **not** containing `sensitive`<br>No time restriction |
+| Update/Overwrite    | ❌                                                        | ❌                                                             | ✅ All files **not** containing `sensitive`     |
+| Delete File         | ❌                                                        | ❌                                                             | ✅ All files **not** containing `sensitive`     |
 
-| List & Read | ✅ | ✅ | ✅ |
-
-| Create File | ❌ | ✅ | ✅ |
-
-| Update/Overwrite | ❌ | ❌ | ✅ |
-
-| Delete File | ❌ | ❌ | ✅ |
-
+### Additional Notes
+- The time restriction applies **exclusively** to the **Member** role's `create` action. **Admin** creations have no time limit.
+- Files with `sensitive` in the name are denied for all actions and all roles.
+- The **User** role has the most restricted access: read-only on specifically marked "release" files, with no ability to create, update, or delete.
   
 
 ---
