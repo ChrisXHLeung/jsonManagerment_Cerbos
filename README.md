@@ -91,7 +91,7 @@ AUTH0_CLIENT_SECRET='your_client_secret'
 
 ```bash
 # Start Cerbos PDP
-docker run -d --name cerbos -p 3593:3593 -v $(pwd)/cerbos/policies:/policies cerbos/cerbos:0.34.0
+docker run -d --name cerbos -p 3593:3593 -v $(pwd)/cerbos/policies:/policies cerbos/cerbos:0.50.0
 
 # Start API Service
 cd cerbos-api && npm install && npm start
