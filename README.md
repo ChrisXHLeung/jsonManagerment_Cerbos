@@ -1,208 +1,108 @@
-# Multi-Role JSON Management System
+# 🛡️ Multi-Role JSON Management System
 
-  
+This project is a high-performance, secure file management showcase. It demonstrates the industry-standard **Decoupled Authorization** architecture, separating **Identity Authentication** (Auth0) from **Granular Access Control** (Cerbos).
 
-This is a sample open-source project demonstrating a secure file management system. It showcases the decoupling of **Identity Authentication** (Who you are) from **Access Control Policy Enforcement** (What you can do).
+## 🏗️ System Architecture
 
-  
+The system operates as a **Policy Enforcement Point (PEP)**, delegating all logic to a centralized **Policy Decision Point (PDP)**.
 
-## 🏗️ Project Architecture
-
-  
-
-The system manages **JavaScript Object Notation (JSON)** files through a coordinated flow between three distinct layers:
-
-  
-
-1.  **Identity Provider (IdP)**: Uses **Auth0** to verify user identities and manage user sessions.
-
-2.  **Authorization Engine**: Uses **Cerbos** to evaluate permissions based on **Attribute-Based Access Control (ABAC)**.
-
-3.  **Application Tier**: A **Node.js** service that handles file **Input/Output (I/O)** and serves as the **Policy Enforcement Point (PEP)**.
-
-  
+1. **Identity Layer (OIDC)**: **Auth0** handles user sessions and issues JWTs containing role claims.
+2. **Authorization Layer (ABAC)**: **Cerbos** evaluates requests against YAML-defined policies using real-time attributes (time, filename).
+3. **Application Layer (PEP)**: A **Node.js** service that manages JSON I/O and enforces the decisions received from Cerbos via **gRPC**.
 
 ---
 
-  
+## 👥 Access Control Logic (ABAC)
 
-## 👥 User Groups & Permissions
+Unlike traditional static RBAC, this system uses **Attribute-Based Access Control (ABAC)** to enforce dynamic rules.
 
-  
+### 🔐 Global Security Guardrails
 
-The project manages access to `json_file` resources (JSON files) for teams divided into three role levels. All access decisions are evaluated at runtime by the **Cerbos Policy Decision Point (PDP)**.
+* **Sensitivity Filter**: Any file matching `(?i)sensitive` in its name is strictly **Isolated**. No role (including Admin) can delete or modify these files via the standard API path.
+* **Release Filter**: The **User** role is restricted to a "Discovery Mode," only seeing files tagged with `release`.
 
-An important resource-level restriction applies across all roles:  
-- Any file whose name contains `sensitive` (case-insensitive) is completely inaccessible to everyone.  
-- **User** role can only access files whose name contains `release` (case-insensitive) and does **not** contain `sensitive`.  
-- **Member** and **Admin** roles can access any file that does **not** contain `sensitive`.
+### 📊 Permission Matrix
 
-### Access Matrix
+| Action | User (Observer) | Member (Contributor) | Admin (Superuser) |
+| --- | --- | --- | --- |
+| **List & Read** | ✅ `release` files only | ✅ All non-sensitive | ✅ Full Access |
+| **Create** | ❌ Denied | ✅ **Work Hours Only**¹ | ✅ Full Access |
+| **Update** | ❌ Denied | ❌ Denied | ✅ All non-sensitive |
+| **Delete** | ❌ Denied | ❌ Denied | ⚠️ Non-sensitive only |
 
-| Action              | **User** (Observer)                                      | **Member** (Contributor)                                      | **Admin** (Superuser)                          |
-|---------------------|----------------------------------------------------------|---------------------------------------------------------------|------------------------------------------------|
-| List & Read         | ✅ Only files containing `release` and **not** `sensitive` | ✅ All files **not** containing `sensitive`                    | ✅ All files  |
-| Create File         | ❌                                                        | ✅ All files **not** containing `sensitive`<br>**Only allowed Monday–Friday, 09:00–16:59** (UTC) | ✅ All files |
-| Update/Overwrite    | ❌                                                        | ❌                                                             | ✅ All files **not** containing `sensitive`     |
-| Delete File         | ❌                                                        | ❌                                                             | ✅ All files **not** containing `sensitive`     |
-
-### Additional Notes
-- The time restriction applies **exclusively** to the **Member** role's `create` action. **Admin** creations have no time limit.
-- Files with `sensitive` in the name are denied for all actions and all roles.
-- The **User** role has the most restricted access: read-only on specifically marked "release" files, with no ability to create, update, or delete.
-  
+> ¹ **Time Attribute**: Member `create` actions are restricted to **Mon–Fri, 09:00–17:00 UTC**.
 
 ---
-
-  
-
-## 🔐 Authentication: OpenID Connect (OIDC)
-
-  
-
-This project strictly implements the **OpenID Connect (OIDC)** protocol, which is an identity layer built on top of the **OAuth 2.0 (Open Authorization)** framework.
-
-  
-
-*  **Delegated Authentication**: Instead of storing sensitive credentials locally, the application delegates the login process to **Auth0**.
-
-*  **Identity Tokens**: Upon successful authentication, the application receives a **JSON Web Token (JWT)** known as an **ID Token**.
-
-*  **Custom Claims**: User group memberships (roles) are extracted from the **ID Token** as **Custom Claims** and passed to the authorization engine.
-
-  
-
----
-
-  
 
 ## 📂 Repository Structure
 
-  
-
-```text
-
+```bash
 .
-
-├── cerbos/ # Cerbos Engine Configuration
-
-│ ├── conf.yaml # Cerbos Server Settings
-
-│ └── policies/ # Authorization Logic (YAML)
-
-└── cerbos-api/ # Node.js API Service
-
-├── storage/ # Managed JSON Repository
-
-├── views/ # Embedded JavaScript (EJS) Templates
-
-├── index.js # Business Logic & gRPC Client
-
-└── Dockerfile # Production-Hardened Container Image
-
-  
+├── cerbos/                # Policy Decision Point (PDP)
+│   ├── conf.yaml          # Cerbos server configuration
+│   └── policies/          # ABAC/RBAC logic defined in YAML
+└── cerbos-api/            # Policy Enforcement Point (PEP)
+    ├── storage/           # Flat-file JSON database
+    ├── views/             # UI Templates (EJS)
+    └── index.js           # Express logic & Cerbos gRPC Client
 
 ```
 
-  
 ---
 
-  
+## 🔧 Setup & Configuration
 
-## 🔐 Auth0 workflow setting
-1. Add your Roles, Users, and assign your users with roles.
-![enter image description here](https://raw.githubusercontent.com/ChrisXHLeung/jsonManagerment_Cerbos/refs/heads/main/images/auth0_role_0.png)
+### 1. Auth0 (Identity Provider) Configuration
 
-2. Add the code of  "Add Roles to Token" in "Actions>Library", then, draw it into the workflow in "Actions>Triggers".
-![enter image description here](https://raw.githubusercontent.com/ChrisXHLeung/jsonManagerment_Cerbos/refs/heads/main/images/auth0_role_1.png)
-![enter image description here](https://raw.githubusercontent.com/ChrisXHLeung/jsonManagerment_Cerbos/refs/heads/main/images/auth0_role_2.png)
-![enter image description here](https://raw.githubusercontent.com/ChrisXHLeung/jsonManagerment_Cerbos/refs/heads/main/images/auth0_role_3.png)
-3.  Modify your application in auth0, incuding login URL, Allow Callback URLs and Allowed Logout URLs. 
-![enter image description here](https://raw.githubusercontent.com/ChrisXHLeung/jsonManagerment_Cerbos/refs/heads/main/images/auth0_role_4.png)
+To pass roles to the application, you must configure an **Auth0 Post-Login Action**:
 
-4.  And don't forget Grant Types
-![enter image description here](https://raw.githubusercontent.com/ChrisXHLeung/jsonManagerment_Cerbos/refs/heads/main/images/auth0_role_5.png)
+1. **Create Action**: `Actions > Library > Build Custom`.
+2. **Add Roles to Token**:
+```javascript
+exports.onExecutePostLogin = async (event, api) => {
+  const namespace = 'https://my-app.example.com';
+  if (event.authorization) {
+    api.idToken.setCustomClaim(`${namespace}/roles`, event.authorization.roles);
+  }
+};
 
----
+```
 
-  
 
-## 🚀 Deployment Workflow
+3. **Deploy**: Add this action to your "Login" flow.
 
-  
+### 2. Environment Variables
 
-### 1. Configure the Identity Provider
-
-  
-
-* Set up a **Regular Web Application** in your **Auth0** dashboard.
-
-* Ensure user roles are included in the token via an Auth0 Action (e.g., `event.authorization.roles`).
-
-  
-
-### 2. Environment Setup
-
-  
-
-Configure the following in `cerbos-api/.env`:
-
-  
+Create `cerbos-api/.env`:
 
 ```env
+# Infrastructure
+CERBOS_HOST='localhost:3593'
+APP_SECRET='your_session_secret'
 
-# Network
-
-CERBOS_HOST='<INTERNAL_IP_OR_DNS>:3593'
-
-APP_SECRET='<YOUR_SESSION_SIGNING_SECRET>'
-
-  
-
-# OpenID Connect (OIDC)
-
-AUTH0_DOMAIN='<YOUR_TENANT>.auth0.com'
-
-AUTH0_CLIENT_ID='<YOUR_CLIENT_ID>'
-
-AUTH0_CLIENT_SECRET='<YOUR_CLIENT_SECRET>'
-
-AUTH0_AUDIENCE='<YOUR_API_IDENTIFIER>'
-
-  
+# OIDC Settings
+AUTH0_DOMAIN='your-tenant.auth0.com'
+AUTH0_CLIENT_ID='your_client_id'
+AUTH0_CLIENT_SECRET='your_client_secret'
 
 ```
 
-  
-
-### 3. Container Deployment
- 
+### 3. Quick Start (Docker)
 
 ```bash
-# Navigate to API directory
-cd  cerbos-api
+# Start Cerbos PDP
+docker run -d --name cerbos -p 3593:3593 -v $(pwd)/cerbos/policies:/policies cerbos/cerbos:0.34.0
 
-# Build secure image
-docker  build  -t  json-management-api  .
+# Start API Service
+cd cerbos-api && npm install && npm start
 
-# Run container
-docker  run  -d  -p  3000:3000  --env-file  .env  json-management-api
 ```
-
-  
 
 ---
 
-  
+## 🛠️ Tech Stack Highlights
 
-## 🛠️ Technology Stack
-
-  
-
-*  **Identity**: **OpenID Connect (OIDC)** via **Auth0**.
-
-*  **Authorization**: **Attribute-Based Access Control (ABAC)** via **Cerbos**.
-
-*  **Communication**: **Google Remote Procedure Call (gRPC)**.
-
-*  **Backend**: **Node.js** with **Express.js**.
+* **Communication**: **gRPC** for ultra-low latency between API and Authorization engine.
+* **Identity**: **OpenID Connect (OIDC)** flow with PKCE.
+* **Policy Engine**: **Cerbos** - stateless, scalable, and audit-ready.
+* **Express Middleware**: Custom middleware to bridge JWT claims to Cerbos principal context.
