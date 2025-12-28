@@ -7,7 +7,7 @@ derivedRoles:
       parentRoles: ["admin"]
       condition:
         match:
-          expr: "!(request.action == 'delete' && R.id.matches('(?i)sensitive'))"
+          expr: "!R.id.matches('(?i)sensitive')"
 
     - name: member
       parentRoles: ["member"]
