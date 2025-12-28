@@ -179,25 +179,14 @@ AUTH0_AUDIENCE='<YOUR_API_IDENTIFIER>'
  
 
 ```bash
-
 # Navigate to API directory
-
 cd  cerbos-api
 
-  
-
 # Build secure image
-
 docker  build  -t  json-management-api  .
 
-  
-
 # Run container
-
 docker  run  -d  -p  3000:3000  --env-file  .env  json-management-api
-
-  
-
 ```
 
   
