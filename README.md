@@ -29,7 +29,7 @@ Unlike traditional static RBAC, this system uses **Attribute-Based Access Contro
 | --- | --- | --- | --- |
 | **List & Read** | ✅ `release` files only | ✅ All non-sensitive | ✅ Full Access |
 | **Create** | ❌ Denied | ✅ **Work Hours Only**¹ | ✅ Full Access |
-| **Update** | ❌ Denied | ❌ Denied | ✅ All non-sensitive |
+| **Update** | ❌ Denied | ❌ Denied | ⚠️ Non-sensitive only |
 | **Delete** | ❌ Denied | ❌ Denied | ⚠️ Non-sensitive only |
 
 > ¹ **Time Attribute**: Member `create` actions are restricted to **Mon–Fri, 09:00–17:00 UTC**.
