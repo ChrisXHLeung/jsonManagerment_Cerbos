@@ -28,8 +28,8 @@ const config = {
   authorizationParams: {
     response_type: 'code',
     audience: process.env.AUTH0_AUDIENCE,
-    scope: 'openid profile email',
-  },
+    scope: 'openid profile email'
+  }
 };
 
 app.use(auth(config));
@@ -39,43 +39,64 @@ async function checkPerm(user, resourceId, action) {
   const roles = user[roleKey] || user.roles || ['user'];
   const roleArray = Array.isArray(roles) ? roles : [roles];
 
-  console.log('--- PERMISSION CHECK ---');
-  console.log('Principal:', user.sub, 'Roles:', JSON.stringify(roleArray));
-
   try {
     const decision = await cerbos.checkResource({
-      principal: {
-        id: user.sub,
-        roles: roleArray,
-      },
-      resource: {
-        kind: 'json_file',
-        id: resourceId,
-      },
-      actions: [action],
+      principal: { id: user.sub, roles: roleArray },
+      resource: { kind: 'json_file', id: resourceId },
+      actions: [action]
     });
-
-    const isAllowed = decision.isAllowed(action);
-    
-    console.log('Action:', action, 'Allowed:', isAllowed);
-    return isAllowed;
+    return decision.isAllowed(action);
   } catch (e) {
-    console.error('CERBOS SDK ERROR:', e.message);
+    console.error(e.message);
     return false;
   }
 }
 
 app.get('/', requiresAuth(), async (req, res) => {
   try {
-    const files = fs.readdirSync(STORAGE_DIR).filter(f => f.endsWith('.json'));
+    const allFiles = fs.readdirSync(STORAGE_DIR).filter(f => f.endsWith('.json'));
     const roleKey = `${process.env.AUTH0_AUDIENCE}roles`;
-    const displayRoles = req.oidc.user[roleKey] || ['user'];
-    res.render('index', { 
-      files, 
-      user: req.oidc.user, 
-      roles: Array.isArray(displayRoles) ? displayRoles : [displayRoles]
+    const roles = req.oidc.user[roleKey] || ['user'];
+    const roleArray = Array.isArray(roles) ? roles : [roles];
+
+    let authorizedFiles = [];
+
+    if (allFiles.length > 0) {
+      const checkResult = await cerbos.checkResources({
+        principal: { id: req.oidc.user.sub, roles: roleArray },
+        resources: allFiles.map(file => ({
+          resource: { kind: 'json_file', id: file },
+          actions: ['read', 'update', 'delete']
+        }))
+      });
+
+      authorizedFiles = allFiles.map(file => {
+        const decision = checkResult.results.find(r => r.resource.id === file);
+        return {
+          name: file,
+          canRead: decision?.actions.read === 'EFFECT_ALLOW',
+          canUpdate: decision?.actions.update === 'EFFECT_ALLOW',
+          canDelete: decision?.actions.delete === 'EFFECT_ALLOW'
+        };
+      }).filter(f => f.canRead);
+    }
+
+    const createDecision = await cerbos.checkResource({
+      principal: { id: req.oidc.user.sub, roles: roleArray },
+      resource: { kind: 'json_file', id: '*' },
+      actions: ['create']
+    });
+
+    const canCreate = createDecision.isAllowed('create');
+
+    res.render('index', {
+      files: authorizedFiles,
+      user: req.oidc.user,
+      roles: roleArray,
+      canCreate
     });
   } catch (err) {
+    console.error(err);
     res.status(500).send(err.message);
   }
 });
@@ -88,10 +109,13 @@ app.get('/download/:name', requiresAuth(), async (req, res) => {
 
 app.post('/upload', requiresAuth(), async (req, res) => {
   if (!req.files || !req.files.jsonFile) return res.status(400).send('No file');
+
   const file = req.files.jsonFile;
-  const action = fs.existsSync(path.join(STORAGE_DIR, file.name)) ? 'update' : 'create';
+  const filePath = path.join(STORAGE_DIR, file.name);
+  const action = fs.existsSync(filePath) ? 'update' : 'create';
+
   if (await checkPerm(req.oidc.user, file.name, action)) {
-    file.mv(path.join(STORAGE_DIR, file.name), (err) => {
+    file.mv(filePath, err => {
       if (err) return res.status(500).send(err);
       res.redirect('/');
     });
